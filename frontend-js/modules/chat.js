@@ -1,9 +1,11 @@
-export default class Chat{
-    constructor(){
+import DOMPurify from 'dompurify';
+export default class Chat {
+    constructor() {
         this.chatWrapper = document.querySelector('#chat-wrapper');
         this.openChat = document.querySelector('.header-chat-icon');
         this.openChatYet = false;
         this.injectHTML();
+        this.chatLog = document.querySelector('#chat');
         this.chatField = document.querySelector('#chatField');
         this.chatForm = document.querySelector('#chatForm');
         this.closeChat = document.querySelector('.chat-title-bar-close');
@@ -11,41 +13,71 @@ export default class Chat{
     }
 
     //events
-    events(){
-        this.chatForm.addEventListener('submit',(e)=>{
+    events() {
+        this.chatForm.addEventListener('submit', (e) => {
             e.preventDefault();
             this.sendMessageToServer();
         });
-        this.openChat.addEventListener('click',()=>this.showChat());
-        this.closeChat.addEventListener('click',()=>this.hideChat());
+        this.openChat.addEventListener('click', () => this.showChat());
+        this.closeChat.addEventListener('click', () => this.hideChat());
     }
 
 
     //methods
-    sendMessageToServer(){
-        this.socket.emit('chatMessageFromBrowser',{message: this.chatField.value});
-        this.chatField.value="";
+    sendMessageToServer() {
+        this.socket.emit('chatMessageFromBrowser', { message: this.chatField.value });
+        this.chatLog.insertAdjacentHTML('beforeend', DOMPurify.sanitize(`
+            <div class="chat-self">
+                <div class="chat-message">
+                <div class="chat-message-inner">
+                    ${this.chatField.value}
+                </div>
+                </div>
+                <img class="chat-avatar avatar-tiny" src=${this.avatar}>
+            </div>
+        `));
+        this.chatLog.scrollTop = this.chatLog.scrollHeight;
+        this.chatField.value = "";
         this.chatField.focus();
     }
-    hideChat(){
+    hideChat() {
         this.chatWrapper.classList.remove('chat--visible');
     }
-    showChat(){
-        if(!this.openChatYet){
+    showChat() {
+        if (!this.openChatYet) {
             this.openConnection();
         }
-        this.openChatYet=true;
+        this.openChatYet = true;
         this.chatWrapper.classList.add('chat--visible');
     }
 
-    openConnection(){
-        this.socket=io();
-        this.socket.on('chatMessageFromServer',function(data){
-            alert(data.message);
+    openConnection() {
+        this.socket = io();
+        this.socket.on('welcome', data => {
+            this.username = data.username;
+            this.avatar = data.avatar;
         })
+        this.socket.on('chatMessageFromServer', (data) => {
+            this.displayMessageFromServer(data);
+        })
+        this.chatField.focus();
     }
-    injectHTML(){
-        this.chatWrapper.innerHTML =`
+
+    displayMessageFromServer(data) {
+        this.chatLog.insertAdjacentHTML('beforeend', DOMPurify.sanitize(`
+            <div class="chat-other">
+                <a href="/profile/${data.username}"><img class="avatar-tiny" src=${data.avatar}></a>
+                <div class="chat-message"><div class="chat-message-inner">
+                <a href="/profile/${data.username}"><strong>${data.username}:</strong></a>
+                ${data.message}
+                </div></div>
+            </div>
+        `));
+        this.chatLog.scrollTop = this.chatLog.scrollHeight;
+    }
+
+    injectHTML() {
+        this.chatWrapper.innerHTML = `
         <div class="chat-title-bar">Chat <span class="chat-title-bar-close"><i class="fas fa-times-circle"></i></span></div>
 
         <div id="chat" class="chat-log"></div>
