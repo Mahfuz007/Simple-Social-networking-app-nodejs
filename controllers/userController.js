@@ -110,6 +110,7 @@ exports.ifUserExists = function(req,res,next){
 exports.profilePostScreen = function(req,res){
     Post.findPostById(req.profileUser._id).then(function(posts){
         res.render('profile',{
+            title: req.profileUser.username,
             currentPage: 'posts',
             isYourself: req.isYourself,
             isFollowing: req.isFollowing,
@@ -154,6 +155,6 @@ exports.profileFollowingScreen = async function(req,res){
         });
 
     }catch{
-        res.render('404');
+        res.render('404',{title: "Page not found"});
     }
 }
